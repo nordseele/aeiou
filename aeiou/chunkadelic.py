@@ -52,26 +52,40 @@ def blow_chunks(
     return 
 
 # %% ../03_chunkadelic.ipynb 7
-def chunk_one_file(filenames:list, args, file_ind):
+def chunk_one_file(
+    filenames:list,      # list of filenames from which we'll pick one
+    args,                # output of argparse
+    file_ind             # index from filenames list to read from
+    ):
     "this chunks up one file by setting things up and then calling blow_chunks"
     filename = filenames[file_ind]  # this is actually input_path+/+filename
     output_path, input_paths = args.output_path, args.input_paths
     new_filename = None
-    if args.debug: print(f" --- process_one_file: filenames[{file_ind}] = {filename}",flush=True)
+    if args.debug: print(f" --- process_one_file: filenames[{file_ind}] = {filename}\n", flush=True)
+    
+    for ipath in input_paths: # set up the output filename & any folders it needs
+        if args.nomix and ('Mix' in ipath) and ('Audio Files' in ipath): return  # this is specific to the BDCT dataset, otherwise ignore
+        if ipath in filename:
+            last_ipath = ipath.split('/')[-1]           # get the last part of ipath
+            clean_filename = filename.replace(ipath,'') # remove all of ipath from the front of filename
+            new_filename = f"{output_path}/{last_ipath}/{clean_filename}".replace('//','/') 
+            makedir(os.path.dirname(new_filename))      # we might need to make a directory for the output file
+            break
 
-    audio, sr = load_audio(filename)
-    if (not args.norm) or (args.norm not in ['global','channel']): args.norm = get_dbmax(audio)
-    audio = normalize_audio(audio, args.norm)
-    new_filename = os.path.join(output_path, os.path.basename(filename))
-    new_filename = os.path.splitext(new_filename)[0]
-    new_folder = os.path.join(output_path, os.path.basename(new_filename))
+    if new_filename is None:
+        print(f"ERROR: Something went wrong with name of input file {filename}. Skipping.",flush=True) 
+        return 
+    
+    try:
+        if args.debug: print(f"   About to load filenames[{file_ind}] = {filename}\n", flush=True)
+        audio = load_audio(filename, sr=args.sr, verbose=args.debug)
+        if args.debug: print(f"   We loaded the audio, audio.shape = {audio.shape}\n   Calling blow_chunks...", flush=True)
+        blow_chunks(audio, new_filename, args.chunk_size, sr=args.sr, spacing=args.spacing, strip=args.strip, thresh=args.thresh, debug=args.debug)
+    except Exception as e: 
+        print(f"Error '{e}' while loading {filename} or writing chunks. Skipping.", flush=True)
 
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
-    if not os.path.exists(new_folder):
-        os.makedirs(new_folder)
-    new_filename = os.path.join(new_folder, os.path.basename(new_filename))
-    blow_chunks(audio, new_filename, args.chunk_size, sr, args.norm, args.spacing, args.strip, args.thresh, args.debug)
+    if args.debug: print(f" --- File {file_ind}: {filename} completed.\n", flush=True)
+    return
 
 # %% ../03_chunkadelic.ipynb 11
 
