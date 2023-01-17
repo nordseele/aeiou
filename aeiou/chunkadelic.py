@@ -7,7 +7,7 @@ __all__ = ['blow_chunks', 'chunk_one_file', 'main']
 import argparse 
 import os 
 from functools import partial
-#from tqdm.contrib.concurrent import process_map  
+from tqdm.contrib.concurrent import process_map  
 import torch
 import torchaudio
 import math
@@ -117,6 +117,6 @@ def main():
         print("Processing files (in parallel)...")
             
     wrapper = partial(chunk_one_file, filenames, args)
-    #r = process_map(wrapper, range(len(filenames)), chunksize=1, max_workers=args.workers)  # different chunksize used by tqdm. max_workers is to avoid annoying other ppl
+    r = process_map(wrapper, range(len(filenames)), chunksize=1, max_workers=args.workers)  # different chunksize used by tqdm. max_workers is to avoid annoying other ppl
   
     if args.verbose: print("Finished")      
